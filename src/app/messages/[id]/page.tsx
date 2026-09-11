@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Pusher from "pusher-js";
 
 type Message = {
   id: string;
@@ -27,11 +28,26 @@ export default function ChatThreadPage() {
     setMessages(data.messages || []);
   }
 
-  useEffect(() => {
+    useEffect(() => {
     if (status !== "authenticated") return;
     loadMessages();
-    const interval = setInterval(loadMessages, 3000);
-    return () => clearInterval(interval);
+
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+    const channel = pusher.subscribe(`conversation-${id}`);
+    channel.bind("new-message", (newMessage: Message) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMessage.id)) return prev;
+        return [...prev, newMessage];
+      });
+    });
+
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe(`conversation-${id}`);
+      pusher.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, id]);
 
@@ -48,10 +64,9 @@ export default function ChatThreadPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
-    setSending(false);
+      setSending(false);
     if (res.ok) {
       setText("");
-      loadMessages();
     }
   }
 

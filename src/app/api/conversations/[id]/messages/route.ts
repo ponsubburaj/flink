@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { pusherServer } from "@/lib/pusher";
 
 async function verifyParticipant(conversationId: string, userId: string) {
   const participant = await db.conversationParticipant.findUnique({
@@ -63,6 +64,8 @@ export async function POST(
     data: { conversationId: id, senderId: userId, text: text.trim() },
     include: { sender: { select: { id: true, username: true, avatarUrl: true } } },
   });
+  
+  await pusherServer.trigger(`conversation-${id}`, "new-message", message);
 
   const otherParticipants = await db.conversationParticipant.findMany({
     where: { conversationId: id, userId: { not: userId } },
