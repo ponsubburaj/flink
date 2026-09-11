@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+model User {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String   @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  name          String?
+  bio           String?
+  avatarUrl     String?
+  isPrivate     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  posts                  Post[]
+  flicks                 Flick[]
+  comments               Comment[]
+  likes                  Like[]
+  followers              Follow[]  @relation("following")
+  following              Follow[]  @relation("follower")
+  sentMessages           Message[] @relation("sender")
+  conversations          ConversationParticipant[]
+  notifications          Notification[] @relation("recipient")
+  triggeredNotifications Notification[] @relation("actor")
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  caption   String?
+  mediaUrls String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  likes    Like[]
+  comments Comment[]
+}
+
+model Flick {
+  id           String   @id @default(cuid())
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  caption      String?
+  videoUrl     String
+  thumbnailUrl String?
+  duration     Int?
+  createdAt    DateTime @default(now())
+
+  likes    Like[]
+  comments Comment[]
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  flickId   String?
+  flick     Flick?   @relation(fields: [flickId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@unique([userId, flickId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  flickId   String?
+  flick     Flick?   @relation(fields: [flickId], references: [id], onDelete: Cascade)
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id           String   @id @default(cuid())
+  isGroup      Boolean  @default(false)
+  name         String?
+  createdAt    DateTime @default(now())
+
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
+  text           String?
+  mediaUrl       String?
+  createdAt      DateTime     @default(now())
+  readAt         DateTime?
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  recipientId String
+  recipient   User     @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId     String
+  actor       User     @relation("actor", fields: [actorId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  postId      String?
+  flickId     String?
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+enum NotificationType {
+  FOLLOW
+  LIKE
+  COMMENT
+  MESSAGE
+}
