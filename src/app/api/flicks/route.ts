@@ -38,6 +38,9 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user ? (session.user as any).id : null;
+
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor");
 
@@ -46,13 +49,52 @@ export async function GET(req: Request) {
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     orderBy: { createdAt: "desc" },
     include: {
-      author: { select: { username: true, avatarUrl: true } },
+      author: { select: { id: true, username: true, avatarUrl: true } },
       _count: { select: { likes: true, comments: true } },
     },
   });
 
+  let likedIds = new Set<string>();
+  if (userId) {
+    const flickIds = flicks.map((f) => f.id);
+    const liked = await db.like.findMany({
+      where: { userId, flickId: { in: flickIds } },
+      select: { flickId: true },
+    });
+    likedIds = new Set(liked.map((l) => l.flickId!));
+  }
+
+  const flicksWithLikeStatus = flicks.map((f) => ({
+    ...f,
+    isLiked: likedIds.has(f.id),
+  }));
+
   return NextResponse.json({
-    flicks,
+    flicks: flicksWithLikeStatus,
     nextCursor: flicks.length === 5 ? flicks[flicks.length - 1].id : null,
   });
+}
+
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "You must be logged in" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  const flick = await db.flick.findUnique({ where: { id } });
+  if (!flick) {
+    return NextResponse.json({ error: "Flick not found" }, { status: 404 });
+  }
+  if (flick.authorId !== (session.user as any).id) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  }
+
+  await db.flick.delete({ where: { id } });
+  return NextResponse.json({ success: true });
 }

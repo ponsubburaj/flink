@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type Flick = {
@@ -8,15 +10,191 @@ type Flick = {
   videoUrl: string;
   thumbnailUrl: string | null;
   caption: string | null;
-  author: { username: string; avatarUrl: string | null };
+  author: { id: string; username: string; avatarUrl: string | null };
   _count: { likes: number; comments: number };
+  isLiked: boolean;
 };
 
+function FlickCard({
+  flick,
+  isActive,
+  onLike,
+  onDelete,
+  myId,
+}: {
+  flick: Flick;
+  isActive: boolean;
+  onLike: (id: string) => void;
+  onDelete: (id: string) => void;
+  myId: string | null;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(true);
+  const [showComments, setShowComments] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isActive) {
+      video.play().catch(() => {});
+      setPlaying(true);
+    } else {
+      video.pause();
+      video.currentTime = 0;
+    }
+  }, [isActive]);
+
+  function togglePlay() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play();
+      setPlaying(true);
+    } else {
+      video.pause();
+      setPlaying(false);
+    }
+  }
+
+  return (
+    <div className="h-full w-full snap-start relative flex items-center justify-center bg-black">
+      <video
+        ref={videoRef}
+        src={flick.videoUrl}
+        poster={flick.thumbnailUrl || undefined}
+        className="h-full w-full object-contain"
+        loop
+        playsInline
+        onClick={togglePlay}
+      />
+
+      {!playing && (
+        <div
+          onClick={togglePlay}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <div className="w-16 h-16 rounded-full bg-black/40 flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z" /></svg>
+          </div>
+        </div>
+      )}
+
+      <div className="absolute bottom-0 left-0 right-16 p-4 text-white bg-gradient-to-t from-black/70 to-transparent pt-10">
+        <Link href={`/${flick.author.username}`} className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-flash to-signal p-[2px] flex-shrink-0">
+            <div className="w-full h-full rounded-full bg-ink overflow-hidden flex items-center justify-center">
+              {flick.author.avatarUrl ? (
+                <img src={flick.author.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white text-xs">{flick.author.username.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+          </div>
+          <span className="font-medium text-sm">{flick.author.username}</span>
+        </Link>
+        {flick.caption && <p className="text-sm opacity-90">{flick.caption}</p>}
+      </div>
+
+      <div className="absolute bottom-4 right-2 flex flex-col items-center gap-5 text-white">
+        <button onClick={() => onLike(flick.id)} className="flex flex-col items-center gap-1">
+          <span className={`text-2xl ${flick.isLiked ? "text-signal" : ""}`}>
+            {flick.isLiked ? "♥" : "♡"}
+          </span>
+          <span className="text-xs">{flick._count.likes}</span>
+        </button>
+        <button onClick={() => setShowComments(true)} className="flex flex-col items-center gap-1">
+          <span className="text-2xl">💬</span>
+          <span className="text-xs">{flick._count.comments}</span>
+        </button>
+        {myId === flick.author.id && (
+          <button onClick={() => onDelete(flick.id)} className="flex flex-col items-center gap-1">
+            <span className="text-2xl">🗑</span>
+          </button>
+        )}
+      </div>
+
+      {showComments && (
+        <FlickComments flickId={flick.id} onClose={() => setShowComments(false)} />
+      )}
+    </div>
+  );
+}
+
+function FlickComments({ flickId, onClose }: { flickId: string; onClose: () => void }) {
+  const [comments, setComments] = useState<{ id: string; text: string; user: { username: string } }[]>([]);
+  const [text, setText] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/comments?flickId=${flickId}`)
+      .then((res) => res.json())
+      .then((data) => setComments(data.comments || []));
+  }, [flickId]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setPosting(true);
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, flickId }),
+    });
+    const json = await res.json();
+    setPosting(false);
+    if (res.ok) {
+      setComments((prev) => [...prev, json.comment]);
+      setText("");
+    }
+  }
+
+  return (
+    <div className="absolute inset-0 bg-black/60 flex items-end" onClick={onClose}>
+      <div
+        className="bg-paper w-full max-h-[60%] rounded-t-2xl flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-mist">
+          <span className="font-medium text-ink text-sm">Comments</span>
+          <button onClick={onClose} className="text-ash text-sm">Close</button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          {comments.length === 0 ? (
+            <p className="text-ash text-sm">No comments yet.</p>
+          ) : (
+            comments.map((c) => (
+              <p key={c.id} className="text-sm text-ink">
+                <span className="font-medium">{c.user.username}</span> {c.text}
+              </p>
+            ))
+          )}
+        </div>
+        <form onSubmit={handleSubmit} className="flex gap-2 px-4 py-3 border-t border-mist">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Add a comment…"
+            className="flex-1 border border-mist rounded-full px-4 py-2 text-sm text-ink focus:outline-none focus:border-flash"
+          />
+          <button type="submit" disabled={posting || !text.trim()} className="text-flash font-medium text-sm disabled:opacity-50">
+            Post
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function FlicksFeedPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const myId = session?.user ? (session.user as any).id : null;
+
   const [flicks, setFlicks] = useState<Flick[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(async () => {
@@ -26,10 +204,10 @@ export default function FlicksFeedPage() {
     const res = await fetch(url);
     const data = await res.json();
     setFlicks((prev) => {
-  const existingIds = new Set(prev.map((f) => f.id));
-  const newOnes = data.flicks.filter((f: Flick) => !existingIds.has(f.id));
-  return [...prev, ...newOnes];
-});
+      const existingIds = new Set(prev.map((f) => f.id));
+      const newOnes = data.flicks.filter((f: Flick) => !existingIds.has(f.id));
+      return [...prev, ...newOnes];
+    });
     setCursor(data.nextCursor);
     setHasMore(!!data.nextCursor);
     setLoading(false);
@@ -43,17 +221,45 @@ export default function FlicksFeedPage() {
   function handleScroll() {
     const el = containerRef.current;
     if (!el) return;
-    const nearBottom = el.scrollTop + el.clientHeight > el.scrollHeight - el.clientHeight;
+    const index = Math.round(el.scrollTop / el.clientHeight);
+    setActiveIndex(index);
+    const nearBottom = el.scrollTop + el.clientHeight > el.scrollHeight - el.clientHeight * 2;
     if (nearBottom) loadMore();
+  }
+
+  async function handleLike(flickId: string) {
+    const res = await fetch("/api/likes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flickId }),
+    });
+    const json = await res.json();
+    if (res.ok) {
+      setFlicks((prev) =>
+        prev.map((f) =>
+          f.id === flickId
+            ? { ...f, isLiked: json.liked, _count: { ...f._count, likes: f._count.likes + (json.liked ? 1 : -1) } }
+            : f
+        )
+      );
+    }
+  }
+
+  async function handleDelete(flickId: string) {
+    if (!confirm("Delete this Flick? This can't be undone.")) return;
+    const res = await fetch(`/api/flicks?id=${flickId}`, { method: "DELETE" });
+    if (res.ok) {
+      setFlicks((prev) => prev.filter((f) => f.id !== flickId));
+    }
   }
 
   if (flicks.length === 0 && !loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-ash gap-1">
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center text-ash gap-1 bg-paper">
         No Flicks yet.
-        <Link href="/flicks/create" className="text-flash font-medium hover:underline ml-1">
+        <button onClick={() => router.push("/flicks/create")} className="text-flash font-medium hover:underline ml-1">
           Be the first to post one
-        </Link>
+        </button>
       </div>
     );
   }
@@ -62,29 +268,17 @@ export default function FlicksFeedPage() {
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="h-screen overflow-y-scroll snap-y snap-mandatory bg-ink"
+      className="h-[calc(100vh-4rem)] overflow-y-scroll snap-y snap-mandatory bg-black"
     >
-      {flicks.map((flick) => (
-        <div key={flick.id} className="h-screen snap-start relative flex items-center justify-center">
-          <video
-            src={flick.videoUrl}
-            poster={flick.thumbnailUrl || undefined}
-            className="max-h-full max-w-full"
-            controls
-            loop
-            playsInline
-          />
-          <div className="absolute bottom-8 left-4 right-4 text-paper">
-            <Link href={`/${flick.author.username}`} className="font-medium hover:underline">
-              @{flick.author.username}
-            </Link>
-            {flick.caption && <p className="text-sm mt-1 opacity-90">{flick.caption}</p>}
-            <div className="flex gap-4 text-sm mt-2 opacity-80">
-              <span>{flick._count.likes} likes</span>
-              <span>{flick._count.comments} comments</span>
-            </div>
-          </div>
-        </div>
+      {flicks.map((flick, i) => (
+        <FlickCard
+          key={flick.id}
+          flick={flick}
+          isActive={i === activeIndex}
+          onLike={handleLike}
+          onDelete={handleDelete}
+          myId={myId}
+        />
       ))}
     </div>
   );
