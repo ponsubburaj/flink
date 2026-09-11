@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
@@ -25,6 +25,8 @@ type Comment = {
 export default function PostDetailPage() {
   const { id } = useParams();
   const { data: session, status } = useSession();
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
   const [data, setData] = useState<PostData | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -42,6 +44,16 @@ export default function PostDetailPage() {
       .then((json) => setComments(json.comments || []));
   }, [id]);
 
+    async function handleDelete() {
+    if (!data) return;
+    if (!confirm("Delete this post? This can't be undone.")) return;
+    setDeleting(true);
+    const res = await fetch(`/api/posts/${data.post.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (res.ok) {
+      router.push(`/${data.post.author.username}`);
+    }
+  }
   async function handleLike() {
     if (!data || status !== "authenticated") return;
     setLikeLoading(true);
@@ -101,7 +113,7 @@ export default function PostDetailPage() {
           <img src={post.mediaUrls[0]} alt={post.caption || "Post"} className="w-full object-cover" />
         </div>
 
-        <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-3 justify-between">
           <Link href={`/${post.author.username}`} className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-mist overflow-hidden flex items-center justify-center">
               {post.author.avatarUrl ? (
@@ -110,8 +122,18 @@ export default function PostDetailPage() {
                 <span className="text-ash text-xs">{post.author.username.charAt(0).toUpperCase()}</span>
               )}
             </div>
-            <span className="text-ink font-medium text-sm">{post.author.username}</span>
+                  <span className="text-ink font-medium text-sm">{post.author.username}</span>
           </Link>
+
+          {session?.user && (session.user as any).id === post.author.id && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-signal text-sm font-medium disabled:opacity-50"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          )}
         </div>
 
         {post.caption && <p className="text-ink text-sm mb-4">{post.caption}</p>}

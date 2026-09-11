@@ -31,3 +31,24 @@ export async function GET(
 
   return NextResponse.json({ post, isLiked });
 }
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "You must be logged in" }, { status: 401 });
+  }
+
+  const post = await db.post.findUnique({ where: { id } });
+  if (!post) {
+    return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+  if (post.authorId !== (session.user as any).id) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  }
+
+  await db.post.delete({ where: { id } });
+  return NextResponse.json({ success: true });
+}

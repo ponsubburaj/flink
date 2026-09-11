@@ -22,7 +22,8 @@ export default function Navbar() {
     return () => clearInterval(interval);
   }, [status]);
 
-  const links = [
+    const links = [
+    { href: "/", label: "Home" },
     { href: "/search", label: "Search" },
     { href: "/flicks", label: "Flicks" },
     { href: "/messages", label: "Messages" },
