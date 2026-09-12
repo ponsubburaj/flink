@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import AppShell from "@/components/AppShell";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -18,6 +19,16 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Flink",
   description: "Catch the moment before it moves on.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Flink",
+  },
+};
+
+export const viewport = {
+  themeColor: "#150A26",
 };
 
 export default function RootLayout({
@@ -30,9 +41,10 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${inter.variable} antialiased font-sans bg-paper text-ink`}
       >
-                    <Providers>
+                <Providers>
           <AppShell>{children}</AppShell>
         </Providers>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );
