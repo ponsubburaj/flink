@@ -5,8 +5,20 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim();
 
-  if (!q || q.length < 1) {
-    return NextResponse.json({ users: [], posts: [], flicks: [] });
+    if (!q || q.length < 1) {
+    const [recentPosts, recentFlicks] = await Promise.all([
+      db.post.findMany({
+        take: 21,
+        orderBy: { createdAt: "desc" },
+        select: { id: true, mediaUrls: true, caption: true },
+      }),
+      db.flick.findMany({
+        take: 21,
+        orderBy: { createdAt: "desc" },
+        select: { id: true, thumbnailUrl: true, videoUrl: true, caption: true },
+      }),
+    ]);
+    return NextResponse.json({ users: [], posts: recentPosts, flicks: recentFlicks });
   }
 
   const users = await db.user.findMany({

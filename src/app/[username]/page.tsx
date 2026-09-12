@@ -158,10 +158,14 @@ export default function ProfilePage() {
               ) : null}
             </div>
 
-            <div className="flex gap-6 text-sm text-ink mb-3">
+              <div className="flex gap-6 text-sm text-ink mb-3">
               <span><strong>{user._count.posts + user._count.flicks}</strong> posts</span>
-              <span><strong>{user._count.followers}</strong> followers</span>
-              <span><strong>{user._count.following}</strong> following</span>
+              <Link href={`/${user.username}/followers`} className="hover:underline">
+                <strong>{user._count.followers}</strong> followers
+              </Link>
+              <Link href={`/${user.username}/following`} className="hover:underline">
+                <strong>{user._count.following}</strong> following
+              </Link>
             </div>
 
             <p className="text-ink font-medium text-sm">{user.name}</p>

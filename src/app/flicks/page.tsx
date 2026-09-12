@@ -32,7 +32,6 @@ function FlickCard({
   const [playing, setPlaying] = useState(true);
   const [showComments, setShowComments] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
-  const tapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTap = useRef(0);
 
   useEffect(() => {
@@ -65,19 +64,15 @@ function FlickCard({
     if (!flick.isLiked) onLike(flick.id);
   }
 
-  function handleTap() {
+    function handleTap() {
     const now = Date.now();
     const gap = now - lastTap.current;
+    lastTap.current = now;
 
-    if (gap < 300) {
-      if (tapTimeout.current) clearTimeout(tapTimeout.current);
+    if (gap > 0 && gap < 300) {
       triggerLikeAnimation();
-      lastTap.current = 0;
     } else {
-      lastTap.current = now;
-      tapTimeout.current = setTimeout(() => {
-        togglePlay();
-      }, 280);
+      togglePlay();
     }
   }
 
@@ -122,7 +117,7 @@ function FlickCard({
         </div>
       )}
 
-      <div className="absolute bottom-24 md:bottom-6 left-0 right-16 p-4 text-white bg-gradient-to-t from-black/70 to-transparent pt-10">
+        <div className="absolute bottom-4 left-0 right-16 p-4 text-white bg-gradient-to-t from-black/70 to-transparent pt-10">
         <Link href={`/${flick.author.username}`} className="flex items-center gap-2 mb-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-flash to-signal p-[2px] flex-shrink-0">
             <div className="w-full h-full rounded-full bg-ink overflow-hidden flex items-center justify-center">
@@ -138,7 +133,7 @@ function FlickCard({
         {flick.caption && <p className="text-sm opacity-90">{flick.caption}</p>}
       </div>
 
-      <div className="absolute bottom-28 md:bottom-6 right-2 flex flex-col items-center gap-5 text-white">
+        <div className="absolute bottom-4 right-2 flex flex-col items-center gap-5 text-white">
         <button onClick={() => triggerLikeAnimation()} className="flex flex-col items-center gap-1">
           <span className={`text-2xl ${flick.isLiked ? "text-signal" : ""}`}>{flick.isLiked ? "♥" : "♡"}</span>
           <span className="text-xs">{flick._count.likes}</span>
@@ -304,9 +299,9 @@ export default function FlicksFeedPage() {
     }
   }
 
-  if (flicks.length === 0 && !loading) {
+    if (flicks.length === 0 && !loading) {
     return (
-      <div className="h-[calc(100dvh-4rem-4rem)] md:h-[calc(100dvh-4rem)] flex items-center justify-center text-ash gap-1 bg-paper">
+      <div className="h-[100dvh] flex items-center justify-center text-ash gap-1 bg-paper">
         No Flicks yet.
         <button onClick={() => router.push("/flicks/create")} className="text-flash font-medium hover:underline ml-1">
           Be the first to post one
@@ -316,22 +311,30 @@ export default function FlicksFeedPage() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      className="h-[calc(100dvh-4rem-4rem)] md:h-[calc(100dvh-4rem)] overflow-y-scroll snap-y snap-mandatory bg-black"
-      style={{ scrollSnapType: "y mandatory" }}
-    >
-      {flicks.map((flick, i) => (
-        <FlickCard
-          key={flick.id}
-          flick={flick}
-          isActive={i === activeIndex}
-          onLike={handleLike}
-          onDelete={handleDelete}
-          myId={myId}
-        />
-      ))}
+    <div className="relative h-[100dvh] bg-black">
+      <Link
+        href="/"
+        className="absolute top-4 left-4 z-50 w-9 h-9 rounded-full bg-black/40 flex items-center justify-center text-white"
+      >
+        ←
+      </Link>
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="h-full overflow-y-scroll snap-y snap-mandatory"
+        style={{ scrollSnapType: "y mandatory" }}
+      >
+        {flicks.map((flick, i) => (
+          <FlickCard
+            key={flick.id}
+            flick={flick}
+            isActive={i === activeIndex}
+            onLike={handleLike}
+            onDelete={handleDelete}
+            myId={myId}
+          />
+        ))}
+      </div>
     </div>
   );
 }

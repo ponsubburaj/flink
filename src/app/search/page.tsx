@@ -9,21 +9,15 @@ type FlickResult = { id: string; thumbnailUrl: string | null; videoUrl: string; 
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<"users" | "posts" | "flicks">("users");
+  const [tab, setTab] = useState<"users" | "posts" | "flicks">("posts");
   const [users, setUsers] = useState<UserResult[]>([]);
   const [posts, setPosts] = useState<PostResult[]>([]);
   const [flicks, setFlicks] = useState<FlickResult[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const runSearch = useCallback(async (q: string) => {
-    if (!q.trim()) {
-      setUsers([]);
-      setPosts([]);
-      setFlicks([]);
-      return;
-    }
+    const runSearch = useCallback(async (q: string) => {
     setLoading(true);
-    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
     const data = await res.json();
     setUsers(data.users || []);
     setPosts(data.posts || []);
@@ -69,7 +63,7 @@ export default function SearchPage() {
 
         {loading && <p className="text-ash text-sm">Searching…</p>}
 
-        {!loading && query.trim() && (
+          {!loading && (
           <>
             {tab === "users" && (
               users.length === 0 ? (
