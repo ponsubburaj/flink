@@ -75,7 +75,7 @@ export default function ChatThreadPage() {
   }
 
   return (
-      <div className="h-[calc(100vh-4rem)] bg-paper flex flex-col max-w-lg mx-auto">
+      <div className="h-[calc(100dvh-4rem)] bg-paper flex flex-col max-w-lg mx-auto">
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
         {messages.map((m) => {
           const isMine = m.sender.id === myId;

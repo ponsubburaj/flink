@@ -43,6 +43,24 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor");
+  const singleId = searchParams.get("id");
+
+  if (singleId) {
+    const flick = await db.flick.findUnique({
+      where: { id: singleId },
+      include: {
+        author: { select: { id: true, username: true, avatarUrl: true } },
+        _count: { select: { likes: true, comments: true } },
+      },
+    });
+    if (!flick) return NextResponse.json({ flicks: [], nextCursor: null });
+    let isLiked = false;
+    if (userId) {
+      const like = await db.like.findFirst({ where: { userId, flickId: singleId } });
+      isLiked = !!like;
+    }
+    return NextResponse.json({ flicks: [{ ...flick, isLiked }], nextCursor: null });
+  }
 
   const flicks = await db.flick.findMany({
     take: 5,

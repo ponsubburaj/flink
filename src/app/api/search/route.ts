@@ -6,16 +6,16 @@ export async function GET(req: Request) {
   const q = searchParams.get("q")?.trim();
 
     if (!q || q.length < 1) {
-    const [recentPosts, recentFlicks] = await Promise.all([
+        const [recentPosts, recentFlicks] = await Promise.all([
       db.post.findMany({
         take: 21,
         orderBy: { createdAt: "desc" },
-        select: { id: true, mediaUrls: true, caption: true },
+        select: { id: true, mediaUrls: true, caption: true, createdAt: true },
       }),
       db.flick.findMany({
         take: 21,
         orderBy: { createdAt: "desc" },
-        select: { id: true, thumbnailUrl: true, videoUrl: true, caption: true },
+        select: { id: true, thumbnailUrl: true, videoUrl: true, caption: true, createdAt: true },
       }),
     ]);
     return NextResponse.json({ users: [], posts: recentPosts, flicks: recentFlicks });
@@ -32,18 +32,18 @@ export async function GET(req: Request) {
     select: { id: true, username: true, name: true, avatarUrl: true },
   });
 
-  const posts = await db.post.findMany({
+    const posts = await db.post.findMany({
     where: { caption: { contains: q, mode: "insensitive" } },
     take: 12,
     orderBy: { createdAt: "desc" },
-    select: { id: true, mediaUrls: true, caption: true },
+    select: { id: true, mediaUrls: true, caption: true, createdAt: true },
   });
 
   const flicks = await db.flick.findMany({
     where: { caption: { contains: q, mode: "insensitive" } },
     take: 12,
     orderBy: { createdAt: "desc" },
-    select: { id: true, thumbnailUrl: true, videoUrl: true, caption: true },
+    select: { id: true, thumbnailUrl: true, videoUrl: true, caption: true, createdAt: true },
   });
 
   return NextResponse.json({ users, posts, flicks });

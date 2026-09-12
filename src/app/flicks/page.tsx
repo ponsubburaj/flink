@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import ShareSheet from "@/components/ShareSheet";
 
 type Flick = {
   id: string;
@@ -31,6 +32,7 @@ function FlickCard({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(true);
   const [showComments, setShowComments] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const lastTap = useRef(0);
 
@@ -73,18 +75,6 @@ function FlickCard({
       triggerLikeAnimation();
     } else {
       togglePlay();
-    }
-  }
-
-  async function handleShare() {
-    const url = `${window.location.origin}/flicks`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Flink", text: flick.caption || "Check out this Flick", url });
-      } catch {}
-    } else {
-      await navigator.clipboard.writeText(url);
-      alert("Link copied to clipboard");
     }
   }
 
@@ -142,7 +132,7 @@ function FlickCard({
           <span className="text-2xl">💬</span>
           <span className="text-xs">{flick._count.comments}</span>
         </button>
-        <button onClick={handleShare} className="flex flex-col items-center gap-1">
+        <button onClick={() => setShowShare(true)} className="flex flex-col items-center gap-1">
           <span className="text-2xl">↗</span>
         </button>
         {myId === flick.author.id && (
@@ -152,7 +142,14 @@ function FlickCard({
         )}
       </div>
 
-      {showComments && <FlickComments flickId={flick.id} onClose={() => setShowComments(false)} />}
+            {showComments && <FlickComments flickId={flick.id} onClose={() => setShowComments(false)} />}
+      {showShare && (
+        <ShareSheet
+          shareUrl={typeof window !== "undefined" ? `${window.location.origin}/flicks?id=${flick.id}` : ""}
+          caption={flick.caption || undefined}
+          onClose={() => setShowShare(false)}
+        />
+      )}
 
       <style jsx>{`
         .heart-pop {
@@ -232,8 +229,17 @@ function FlickComments({ flickId, onClose }: { flickId: string; onClose: () => v
 }
 
 export default function FlicksFeedPage() {
+  return (
+    <Suspense fallback={<div className="h-[100dvh] bg-black" />}>
+      <FlicksFeedInner />
+    </Suspense>
+  );
+}
+
+function FlicksFeedInner() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const myId = session?.user ? (session.user as any).id : null;
 
   const [flicks, setFlicks] = useState<Flick[]>([]);
@@ -259,8 +265,17 @@ export default function FlicksFeedPage() {
     setLoading(false);
   }, [cursor, hasMore, loading]);
 
-  useEffect(() => {
-    loadMore();
+    useEffect(() => {
+    const sharedId = searchParams.get("id");
+    async function init() {
+      if (sharedId) {
+        const res = await fetch(`/api/flicks?id=${sharedId}`);
+        const data = await res.json();
+        if (data.flicks?.length) setFlicks(data.flicks);
+      }
+      loadMore();
+    }
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
