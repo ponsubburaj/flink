@@ -17,7 +17,6 @@ export default function ChatThreadPage() {
   const { data: session, status } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const myId = (session?.user as any)?.id;
 
@@ -28,7 +27,7 @@ export default function ChatThreadPage() {
     setMessages(data.messages || []);
   }
 
-    useEffect(() => {
+  useEffect(() => {
     if (status !== "authenticated") return;
     loadMessages();
 
@@ -57,16 +56,36 @@ export default function ChatThreadPage() {
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
-    setSending(true);
+    const trimmed = text.trim();
+    if (!trimmed || !myId) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+      sender: {
+        id: myId,
+        username: (session?.user as any)?.username || "",
+        avatarUrl: (session?.user as any)?.image || null,
+      },
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setText("");
+
     const res = await fetch(`/api/conversations/${id}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text: trimmed }),
     });
-      setSending(false);
+
     if (res.ok) {
-      setText("");
+      const data = await res.json();
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? data.message : m)));
+    } else {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setText(trimmed);
     }
   }
 
@@ -75,16 +94,17 @@ export default function ChatThreadPage() {
   }
 
   return (
-      <div className="h-[calc(100dvh-4rem)] bg-paper flex flex-col max-w-lg mx-auto">
+    <div className="h-[calc(100dvh-4rem)] bg-paper flex flex-col max-w-lg mx-auto">
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
         {messages.map((m) => {
           const isMine = m.sender.id === myId;
+          const isPending = m.id.startsWith("temp-");
           return (
             <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
               <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
+                className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
                   isMine ? "bg-gradient-to-r from-flash to-signal text-white" : "bg-mist text-ink"
-                }`}
+                } ${isPending ? "opacity-60" : ""}`}
               >
                 {m.text}
               </div>
@@ -102,11 +122,7 @@ export default function ChatThreadPage() {
           maxLength={2000}
           className="flex-1 border border-mist rounded-full px-4 py-2 text-sm text-ink focus:outline-none focus:border-flash focus:ring-1 focus:ring-flash"
         />
-        <button
-          type="submit"
-          disabled={sending || !text.trim()}
-          className="text-flash font-medium text-sm disabled:opacity-50 px-2"
-        >
+        <button type="submit" disabled={!text.trim()} className="text-flash font-medium text-sm disabled:opacity-50 px-2">
           Send
         </button>
       </form>

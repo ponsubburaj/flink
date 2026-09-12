@@ -31,6 +31,7 @@ export default function Navbar() {
     { href: "/flicks/create", label: "New Flick" },
     { href: "/notifications", label: "Alerts", badge: unreadCount },
     { href: username ? `/${username}` : "/", label: "Profile" },
+    { href: "/settings", label: "Settings" },
   ];
 
   return (

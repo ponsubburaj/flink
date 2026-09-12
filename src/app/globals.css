@@ -19,6 +19,12 @@
   --font-display: var(--font-space-grotesk);
   --font-sans: var(--font-inter);
 }
+[data-theme="dark"] {
+  --ink: #f5f3ee;
+  --paper: #150a26;
+  --mist: #2a2140;
+  --ash: #a39fb0;
+}
 
 body {
   background: var(--paper);
