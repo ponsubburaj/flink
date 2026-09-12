@@ -31,6 +31,9 @@ function FlickCard({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(true);
   const [showComments, setShowComments] = useState(false);
+  const [showHeart, setShowHeart] = useState(false);
+  const tapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTap = useRef(0);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -56,8 +59,45 @@ function FlickCard({
     }
   }
 
+  function triggerLikeAnimation() {
+    setShowHeart(true);
+    setTimeout(() => setShowHeart(false), 700);
+    if (!flick.isLiked) onLike(flick.id);
+  }
+
+  function handleTap() {
+    const now = Date.now();
+    const gap = now - lastTap.current;
+
+    if (gap < 300) {
+      if (tapTimeout.current) clearTimeout(tapTimeout.current);
+      triggerLikeAnimation();
+      lastTap.current = 0;
+    } else {
+      lastTap.current = now;
+      tapTimeout.current = setTimeout(() => {
+        togglePlay();
+      }, 280);
+    }
+  }
+
+  async function handleShare() {
+    const url = `${window.location.origin}/flicks`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Flink", text: flick.caption || "Check out this Flick", url });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert("Link copied to clipboard");
+    }
+  }
+
   return (
-    <div className="h-full w-full snap-start relative flex items-center justify-center bg-black">
+    <div
+      className="h-full w-full snap-start relative flex items-center justify-center bg-black"
+      style={{ scrollSnapStop: "always" }}
+    >
       <video
         ref={videoRef}
         src={flick.videoUrl}
@@ -65,21 +105,24 @@ function FlickCard({
         className="h-full w-full object-contain"
         loop
         playsInline
-        onClick={togglePlay}
+        onClick={handleTap}
       />
 
       {!playing && (
-        <div
-          onClick={togglePlay}
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        >
+        <div onClick={handleTap} className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-16 h-16 rounded-full bg-black/40 flex items-center justify-center">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z" /></svg>
           </div>
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-16 p-4 text-white bg-gradient-to-t from-black/70 to-transparent pt-10">
+      {showHeart && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span className="text-white text-8xl heart-pop">♥</span>
+        </div>
+      )}
+
+      <div className="absolute bottom-24 md:bottom-6 left-0 right-16 p-4 text-white bg-gradient-to-t from-black/70 to-transparent pt-10">
         <Link href={`/${flick.author.username}`} className="flex items-center gap-2 mb-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-flash to-signal p-[2px] flex-shrink-0">
             <div className="w-full h-full rounded-full bg-ink overflow-hidden flex items-center justify-center">
@@ -95,16 +138,17 @@ function FlickCard({
         {flick.caption && <p className="text-sm opacity-90">{flick.caption}</p>}
       </div>
 
-      <div className="absolute bottom-4 right-2 flex flex-col items-center gap-5 text-white">
-        <button onClick={() => onLike(flick.id)} className="flex flex-col items-center gap-1">
-          <span className={`text-2xl ${flick.isLiked ? "text-signal" : ""}`}>
-            {flick.isLiked ? "♥" : "♡"}
-          </span>
+      <div className="absolute bottom-28 md:bottom-6 right-2 flex flex-col items-center gap-5 text-white">
+        <button onClick={() => triggerLikeAnimation()} className="flex flex-col items-center gap-1">
+          <span className={`text-2xl ${flick.isLiked ? "text-signal" : ""}`}>{flick.isLiked ? "♥" : "♡"}</span>
           <span className="text-xs">{flick._count.likes}</span>
         </button>
         <button onClick={() => setShowComments(true)} className="flex flex-col items-center gap-1">
           <span className="text-2xl">💬</span>
           <span className="text-xs">{flick._count.comments}</span>
+        </button>
+        <button onClick={handleShare} className="flex flex-col items-center gap-1">
+          <span className="text-2xl">↗</span>
         </button>
         {myId === flick.author.id && (
           <button onClick={() => onDelete(flick.id)} className="flex flex-col items-center gap-1">
@@ -113,9 +157,19 @@ function FlickCard({
         )}
       </div>
 
-      {showComments && (
-        <FlickComments flickId={flick.id} onClose={() => setShowComments(false)} />
-      )}
+      {showComments && <FlickComments flickId={flick.id} onClose={() => setShowComments(false)} />}
+
+      <style jsx>{`
+        .heart-pop {
+          animation: heartPop 0.7s ease-out forwards;
+        }
+        @keyframes heartPop {
+          0% { transform: scale(0.5); opacity: 0; }
+          25% { transform: scale(1.2); opacity: 1; }
+          50% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.1); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -150,10 +204,7 @@ function FlickComments({ flickId, onClose }: { flickId: string; onClose: () => v
 
   return (
     <div className="absolute inset-0 bg-black/60 flex items-end" onClick={onClose}>
-      <div
-        className="bg-paper w-full max-h-[60%] rounded-t-2xl flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bg-paper w-full max-h-[60%] rounded-t-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-mist">
           <span className="font-medium text-ink text-sm">Comments</span>
           <button onClick={onClose} className="text-ash text-sm">Close</button>
@@ -255,7 +306,7 @@ export default function FlicksFeedPage() {
 
   if (flicks.length === 0 && !loading) {
     return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center text-ash gap-1 bg-paper">
+      <div className="h-[calc(100dvh-4rem-4rem)] md:h-[calc(100dvh-4rem)] flex items-center justify-center text-ash gap-1 bg-paper">
         No Flicks yet.
         <button onClick={() => router.push("/flicks/create")} className="text-flash font-medium hover:underline ml-1">
           Be the first to post one
@@ -268,7 +319,8 @@ export default function FlicksFeedPage() {
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="h-[calc(100vh-4rem)] overflow-y-scroll snap-y snap-mandatory bg-black"
+      className="h-[calc(100dvh-4rem-4rem)] md:h-[calc(100dvh-4rem)] overflow-y-scroll snap-y snap-mandatory bg-black"
+      style={{ scrollSnapType: "y mandatory" }}
     >
       {flicks.map((flick, i) => (
         <FlickCard
