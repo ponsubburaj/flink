@@ -30,3 +30,18 @@ body {
   background: var(--paper);
   color: var(--ink);
 }
+@keyframes drift1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, 40px) scale(1.1); }
+  100% { transform: translate(-20px, -10px) scale(0.95); }
+}
+@keyframes drift2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-40px, -20px) scale(1.05); }
+  100% { transform: translate(20px, 30px) scale(0.9); }
+}
+@keyframes drift3 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(25px, -30px) scale(1.15); }
+  100% { transform: translate(-15px, 20px) scale(1); }
+}
