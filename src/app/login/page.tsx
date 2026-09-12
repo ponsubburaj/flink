@@ -59,7 +59,7 @@ export default function LoginPage() {
               placeholder="Email"
               className="w-full bg-white/[0.07] border border-white/[0.15] rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-flash"
             />
-            <input
+                        <input
               type="password"
               required
               value={password}
@@ -67,6 +67,11 @@ export default function LoginPage() {
               placeholder="Password"
               className="w-full bg-white/[0.07] border border-white/[0.15] rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-flash"
             />
+            <div className="text-right -mt-1">
+              <Link href="/forgot-password" className="text-white/50 text-xs hover:text-white/80">
+                Forgot password?
+              </Link>
+            </div>
 
             {error && <p className="text-signal text-sm">{error}</p>}
 
