@@ -143,7 +143,7 @@ export default function ChatThreadPage() {
               className={`flex ${isMine ? "justify-end" : "justify-start"} ${prevSameSender ? "mt-0.5" : "mt-2"}`}
             >
               <div
-                className={`max-w-[72%] px-4 py-2.5 text-sm leading-relaxed ${
+                      className={`max-w-[72%] px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                   isMine
                     ? "bg-gradient-to-r from-flash to-signal text-white rounded-2xl rounded-br-md"
                     : "bg-mist text-ink rounded-2xl rounded-bl-md"

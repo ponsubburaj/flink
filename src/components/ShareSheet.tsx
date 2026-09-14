@@ -17,7 +17,8 @@ export default function ShareSheet({
   const [recent, setRecent] = useState<{ conversationId: string; user: Person }[]>([]);
   const [searchResults, setSearchResults] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sentTo, setSentTo] = useState<Set<string>>(new Set());
+    const [sentTo, setSentTo] = useState<Set<string>>(new Set());
+  const [sendingTo, setSendingTo] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/conversations")
@@ -40,23 +41,58 @@ export default function ShareSheet({
     return () => clearTimeout(t);
   }, [query, search]);
 
-  async function sendToConversation(conversationId: string, key: string) {
-    await fetch(`/api/conversations/${conversationId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: `Check this out: ${shareUrl}` }),
-    });
-    setSentTo((prev) => new Set(prev).add(key));
+    async function sendToConversation(conversationId: string, key: string) {
+    setSendingTo((prev) => new Set(prev).add(key));
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: `Check this out: ${shareUrl}` }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Couldn't send. Try again.");
+        return;
+      }
+      setSentTo((prev) => new Set(prev).add(key));
+    } catch {
+      alert("Couldn't send. Check your connection and try again.");
+    } finally {
+      setSendingTo((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
   }
 
   async function sendToUser(userId: string) {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetUserId: userId }),
-    });
-    const json = await res.json();
-    if (res.ok) await sendToConversation(json.conversationId, userId);
+    setSendingTo((prev) => new Set(prev).add(userId));
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: userId }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || "Couldn't start conversation.");
+        setSendingTo((prev) => {
+          const next = new Set(prev);
+          next.delete(userId);
+          return next;
+        });
+        return;
+      }
+      await sendToConversation(json.conversationId, userId);
+    } catch {
+      alert("Couldn't send. Check your connection and try again.");
+      setSendingTo((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    }
   }
 
     async function handleNativeShare() {
@@ -108,12 +144,12 @@ export default function ShareSheet({
                     )}
                   </div>
                   <span className="flex-1 text-ink text-sm font-medium">{item.user.username}</span>
-                  <button
+                    <button
                     onClick={item.action}
-                    disabled={sentTo.has(item.key)}
-                    className={`text-sm font-medium rounded-full px-4 py-1.5 ${sentTo.has(item.key) ? "bg-mist text-ash" : "bg-gradient-to-r from-flash to-signal text-white"}`}
+                    disabled={sentTo.has(item.key) || sendingTo.has(item.key)}
+                    className={`text-sm font-medium rounded-full px-4 py-1.5 disabled:opacity-70 ${sentTo.has(item.key) ? "bg-mist text-ash" : "bg-gradient-to-r from-flash to-signal text-white"}`}
                   >
-                    {sentTo.has(item.key) ? "Sent" : "Send"}
+                    {sentTo.has(item.key) ? "Sent ✓" : sendingTo.has(item.key) ? "Sending…" : "Send"}
                   </button>
                 </div>
               ))}

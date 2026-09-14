@@ -69,7 +69,7 @@ export async function GET() {
     orderBy: { messages: { _count: "desc" } },
   });
 
-  const formatted = conversations
+    const formatted = conversations
     .map((c) => ({
       id: c.id,
       otherUser: c.participants[0]?.user || null,
@@ -82,5 +82,15 @@ export async function GET() {
       return bTime - aTime;
     });
 
-  return NextResponse.json({ conversations: formatted });
+  // Some earlier test conversations may have created duplicate threads with the
+  // same person before we added proper existence-checks — collapse to one per person,
+  // keeping whichever thread was most recently active.
+  const seen = new Set<string>();
+  const deduped = formatted.filter((c) => {
+    if (!c.otherUser || seen.has(c.otherUser.id)) return false;
+    seen.add(c.otherUser.id);
+    return true;
+  });
+
+  return NextResponse.json({ conversations: deduped });
 }
