@@ -13,8 +13,8 @@ const updateSchema = z.object({
     .max(20)
     .regex(/^[a-zA-Z0-9_.]+$/),
   avatarUrl: z.string().url().optional(),
+  isPrivate: z.boolean().optional(),
 });
-
 export async function PATCH(req: Request) {
   const session = await getServerSession(authOptions);
 

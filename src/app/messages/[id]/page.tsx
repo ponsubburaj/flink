@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import Pusher from "pusher-js";
 
 type Message = {
@@ -12,10 +13,13 @@ type Message = {
   sender: { id: string; username: string; avatarUrl: string | null };
 };
 
+type OtherUser = { username: string; avatarUrl: string | null };
+
 export default function ChatThreadPage() {
   const { id } = useParams();
   const { data: session, status } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const myId = (session?.user as any)?.id;
@@ -25,6 +29,8 @@ export default function ChatThreadPage() {
     if (!res.ok) return;
     const data = await res.json();
     setMessages(data.messages || []);
+    const other = data.messages.find((m: Message) => m.sender.id !== myId)?.sender;
+    if (other) setOtherUser(other);
   }
 
   useEffect(() => {
@@ -40,6 +46,7 @@ export default function ChatThreadPage() {
         if (prev.some((m) => m.id === newMessage.id)) return prev;
         return [...prev, newMessage];
       });
+      if (newMessage.sender.id !== myId) setOtherUser(newMessage.sender);
     });
 
     return () => {
@@ -82,7 +89,13 @@ export default function ChatThreadPage() {
 
     if (res.ok) {
       const data = await res.json();
-      setMessages((prev) => prev.map((m) => (m.id === tempId ? data.message : m)));
+      setMessages((prev) => {
+        const alreadyDelivered = prev.some((m) => m.id === data.message.id);
+        if (alreadyDelivered) {
+          return prev.filter((m) => m.id !== tempId);
+        }
+        return prev.map((m) => (m.id === tempId ? data.message : m));
+      });
     } else {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setText(trimmed);
@@ -95,15 +108,39 @@ export default function ChatThreadPage() {
 
   return (
     <div className="h-[calc(100dvh-4rem)] bg-paper flex flex-col max-w-lg mx-auto">
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
-        {messages.map((m) => {
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-mist">
+        <Link href="/messages" className="text-ink text-lg">←</Link>
+        {otherUser && (
+          <Link href={`/${otherUser.username}`} className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-flash to-signal p-[2px] flex-shrink-0">
+              <div className="w-full h-full rounded-full bg-paper overflow-hidden flex items-center justify-center">
+                {otherUser.avatarUrl ? (
+                  <img src={otherUser.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-flash text-xs">{otherUser.username.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+            </div>
+            <span className="font-medium text-ink text-sm">{otherUser.username}</span>
+          </Link>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-2.5">
+        {messages.map((m, i) => {
           const isMine = m.sender.id === myId;
           const isPending = m.id.startsWith("temp-");
+          const prevSameSender = i > 0 && messages[i - 1].sender.id === m.sender.id;
           return (
-            <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+            <div
+              key={m.id}
+              className={`flex ${isMine ? "justify-end" : "justify-start"} ${prevSameSender ? "mt-0.5" : "mt-2"}`}
+            >
               <div
-                className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                  isMine ? "bg-gradient-to-r from-flash to-signal text-white" : "bg-mist text-ink"
+                className={`max-w-[72%] px-4 py-2.5 text-sm leading-relaxed ${
+                  isMine
+                    ? "bg-gradient-to-r from-flash to-signal text-white rounded-2xl rounded-br-md"
+                    : "bg-mist text-ink rounded-2xl rounded-bl-md"
                 } ${isPending ? "opacity-60" : ""}`}
               >
                 {m.text}
@@ -114,16 +151,20 @@ export default function ChatThreadPage() {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSend} className="border-t border-mist px-6 py-4 flex gap-2">
+      <form onSubmit={handleSend} className="border-t border-mist px-4 py-3 flex gap-2 items-center">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Message…"
           maxLength={2000}
-          className="flex-1 border border-mist rounded-full px-4 py-2 text-sm text-ink focus:outline-none focus:border-flash focus:ring-1 focus:ring-flash"
+          className="flex-1 border border-mist rounded-full px-4 py-2.5 text-sm text-ink focus:outline-none focus:border-flash focus:ring-1 focus:ring-flash"
         />
-        <button type="submit" disabled={!text.trim()} className="text-flash font-medium text-sm disabled:opacity-50 px-2">
-          Send
+        <button
+          type="submit"
+          disabled={!text.trim()}
+          className="bg-gradient-to-r from-flash to-signal text-white rounded-full w-9 h-9 flex items-center justify-center disabled:opacity-40 flex-shrink-0"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2z" /></svg>
         </button>
       </form>
     </div>

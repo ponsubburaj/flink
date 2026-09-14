@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import CropModal from "@/components/CropModal";
 
 export default function EditProfilePage() {
   const { data: session, status, update } = useSession();
@@ -13,6 +14,7 @@ export default function EditProfilePage() {
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -32,10 +34,14 @@ export default function EditProfilePage() {
     }
   }, [session]);
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setCropSrc(URL.createObjectURL(file));
+  }
 
+  async function handleCropDone(blob: Blob) {
+    setCropSrc(null);
     setUploading(true);
     setError("");
 
@@ -43,7 +49,7 @@ export default function EditProfilePage() {
       const presignRes = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentType: file.type, folder: "avatars" }),
+        body: JSON.stringify({ contentType: "image/jpeg", folder: "avatars" }),
       });
       const presignData = await presignRes.json();
 
@@ -55,8 +61,8 @@ export default function EditProfilePage() {
 
       const uploadRes = await fetch(presignData.uploadUrl, {
         method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
+        headers: { "Content-Type": "image/jpeg" },
+        body: blob,
       });
 
       if (!uploadRes.ok) {
@@ -177,8 +183,16 @@ export default function EditProfilePage() {
           >
             {saving ? "Saving…" : "Save changes"}
           </button>
-        </form>
+                </form>
       </div>
+
+      {cropSrc && (
+        <CropModal
+          imageSrc={cropSrc}
+          onCancel={() => setCropSrc(null)}
+          onCropDone={handleCropDone}
+        />
+      )}
     </div>
   );
 }
