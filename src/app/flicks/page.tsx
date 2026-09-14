@@ -130,7 +130,7 @@ function FlickCard({
         {flick.caption && <p className="text-sm opacity-90">{flick.caption}</p>}
       </div>
 
-              <div className="absolute bottom-4 right-3 flex flex-col items-center gap-6 text-white">
+                 <div className="absolute bottom-20 right-3 flex flex-col items-center gap-6 text-white">
                 <button onClick={(e) => { e.stopPropagation(); triggerLikeAnimation(); }} className="flex flex-col items-center gap-1.5">
           <div className="w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
             <svg width="22" height="22" viewBox="0 0 24 24" fill={flick.isLiked ? "#E83D97" : "none"} stroke={flick.isLiked ? "#E83D97" : "white"} strokeWidth="2">
