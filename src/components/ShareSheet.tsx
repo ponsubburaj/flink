@@ -59,14 +59,16 @@ export default function ShareSheet({
     if (res.ok) await sendToConversation(json.conversationId, userId);
   }
 
-  async function handleNativeShare() {
-    if (navigator.share) {
-      try {
+    async function handleNativeShare() {
+    try {
+      if (navigator.share) {
         await navigator.share({ title: "Flink", text: caption || "Check this out", url: shareUrl });
-      } catch {}
-    } else {
-      await navigator.clipboard.writeText(shareUrl);
-      alert("Link copied to clipboard");
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        alert("Link copied to clipboard");
+      }
+    } catch (err: any) {
+      if (err.name !== "AbortError") alert("Share error: " + err.message);
     }
   }
 

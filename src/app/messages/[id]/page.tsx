@@ -24,18 +24,24 @@ export default function ChatThreadPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const myId = (session?.user as any)?.id;
 
-  async function loadMessages() {
+    async function loadMessages() {
     const res = await fetch(`/api/conversations/${id}/messages`);
     if (!res.ok) return;
     const data = await res.json();
     setMessages(data.messages || []);
-    const other = data.messages.find((m: Message) => m.sender.id !== myId)?.sender;
-    if (other) setOtherUser(other);
   }
 
-  useEffect(() => {
+  async function loadConversationInfo() {
+    const res = await fetch(`/api/conversations/${id}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.otherUser) setOtherUser(data.otherUser);
+  }
+
+    useEffect(() => {
     if (status !== "authenticated") return;
     loadMessages();
+    loadConversationInfo();
 
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
