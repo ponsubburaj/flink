@@ -77,10 +77,7 @@ export default function SearchPage() {
                   href={item.type === "post" ? `/post/${item.id}` : `/flicks?id=${item.id}`}
                   className="aspect-square bg-mist overflow-hidden rounded-lg relative"
                 >
-                  <img src={item.thumb} alt={item.caption || ""} className="w-full h-full object-cover" />
-                  {item.type === "flick" && (
-                    <span className="absolute top-1.5 right-1.5 text-white text-xs drop-shadow">▶</span>
-                  )}
+                <img src={item.thumb} alt={item.caption || ""} className="w-full h-full object-cover" />
                 </Link>
               ))}
             </div>

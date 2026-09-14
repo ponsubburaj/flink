@@ -55,12 +55,15 @@ export default function InboxPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (status !== "authenticated") return;
     fetch("/api/conversations")
       .then((res) => res.json())
       .then((data) => {
-        setConversations(data.conversations || []);
+        const withoutAlphaAI = (data.conversations || []).filter(
+          (c: ConversationItem) => c.otherUser.username !== "alphaai"
+        );
+        setConversations(withoutAlphaAI);
         setLoading(false);
       });
   }, [status]);
