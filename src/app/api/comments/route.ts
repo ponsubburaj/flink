@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendPushToUser } from "@/lib/push";
 
 const createCommentSchema = z.object({
   text: z.string().min(1).max(500),
@@ -43,10 +44,13 @@ export async function POST(req: Request) {
     authorId = flick?.authorId || null;
   }
 
-  if (authorId && authorId !== userId) {
+    if (authorId && authorId !== userId) {
     await db.notification.create({
       data: { recipientId: authorId, actorId: userId, type: "COMMENT", postId, flickId },
     });
+
+    const actor = await db.user.findUnique({ where: { id: userId }, select: { username: true } });
+    sendPushToUser(authorId, "Flink", `${actor?.username} commented: ${text.slice(0, 60)}`, postId ? `/post/${postId}` : "/flicks").catch(() => {});
   }
 
   return NextResponse.json({ comment }, { status: 201 });

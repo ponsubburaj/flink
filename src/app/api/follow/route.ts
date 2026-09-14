@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendPushToUser } from "@/lib/push";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -34,9 +35,12 @@ export async function POST(req: Request) {
     data: { followerId, followingId: targetUserId },
   });
 
-  await db.notification.create({
+    await db.notification.create({
     data: { recipientId: targetUserId, actorId: followerId, type: "FOLLOW" },
   });
+
+  const actor = await db.user.findUnique({ where: { id: followerId }, select: { username: true } });
+  sendPushToUser(targetUserId, "Flink", `${actor?.username} started following you`, `/${actor?.username}`).catch(() => {});
 
   return NextResponse.json({ following: true });
 }

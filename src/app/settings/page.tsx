@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/ThemeProvider";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 import Link from "next/link";
 
 export default function SettingsPage() {
@@ -134,6 +135,11 @@ export default function SettingsPage() {
               🌙 Dark
             </button>
           </div>
+        </section>
+
+                <section className="border border-mist rounded-xl p-4">
+          <p className="text-ink font-medium text-sm mb-1">Notifications</p>
+          <PushNotificationToggle />
         </section>
 
         {/* Support */}

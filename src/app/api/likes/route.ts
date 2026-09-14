@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendPushToUser } from "@/lib/push";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     authorId = flick?.authorId || null;
   }
 
-  if (authorId && authorId !== userId) {
+    if (authorId && authorId !== userId) {
     await db.notification.create({
       data: {
         recipientId: authorId,
@@ -48,7 +49,11 @@ export async function POST(req: Request) {
         flickId: flickId || undefined,
       },
     });
+
+    const actor = await db.user.findUnique({ where: { id: userId }, select: { username: true } });
+    sendPushToUser(authorId, "Flink", `${actor?.username} liked your post`, postId ? `/post/${postId}` : "/flicks").catch(() => {});
   }
+  
 
   return NextResponse.json({ liked: true });
 }

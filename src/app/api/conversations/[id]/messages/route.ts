@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { pusherServer } from "@/lib/pusher";
+import { sendPushToUser } from "@/lib/push";
 
 async function verifyParticipant(conversationId: string, userId: string) {
   const participant = await db.conversationParticipant.findUnique({
@@ -71,12 +72,17 @@ export async function POST(
     where: { conversationId: id, userId: { not: userId } },
   });
 
-  await db.notification.createMany({
+    await db.notification.createMany({
     data: otherParticipants.map((p) => ({
       recipientId: p.userId,
       actorId: userId,
       type: "MESSAGE" as const,
     })),
+  });
+
+  const sender = await db.user.findUnique({ where: { id: userId }, select: { username: true } });
+  otherParticipants.forEach((p) => {
+    sendPushToUser(p.userId, sender?.username || "New message", text.trim().slice(0, 80), `/messages/${id}`).catch(() => {});
   });
 
   return NextResponse.json({ message }, { status: 201 });
