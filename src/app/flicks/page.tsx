@@ -131,7 +131,7 @@ function FlickCard({
       </div>
 
               <div className="absolute bottom-4 right-3 flex flex-col items-center gap-6 text-white">
-        <button onClick={() => triggerLikeAnimation()} className="flex flex-col items-center gap-1.5">
+                <button onClick={(e) => { e.stopPropagation(); triggerLikeAnimation(); }} className="flex flex-col items-center gap-1.5">
           <div className="w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
             <svg width="22" height="22" viewBox="0 0 24 24" fill={flick.isLiked ? "#E83D97" : "none"} stroke={flick.isLiked ? "#E83D97" : "white"} strokeWidth="2">
               <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" />
@@ -139,7 +139,7 @@ function FlickCard({
           </div>
           <span className="text-xs font-medium drop-shadow">{flick._count.likes}</span>
         </button>
-        <button onClick={() => setShowComments(true)} className="flex flex-col items-center gap-1.5">
+          <button onClick={(e) => { e.stopPropagation(); setShowComments(true); }} className="flex flex-col items-center gap-1.5">
           <div className="w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 11.5a8.38 8.38 0 01-4.9 7.6 8.5 8.5 0 01-9.8-1.7L3 21l1.9-5.7a8.38 8.38 0 01-1.7-5.1 8.5 8.5 0 018-8.5h.5a8.48 8.48 0 018 8v.5z" />
@@ -147,7 +147,7 @@ function FlickCard({
           </div>
           <span className="text-xs font-medium drop-shadow">{flick._count.comments}</span>
         </button>
-        <button onClick={() => setShowShare(true)} className="flex flex-col items-center gap-1.5">
+                <button onClick={(e) => { e.stopPropagation(); setShowShare(true); }} className="flex flex-col items-center gap-1.5">
           <div className="w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 2L11 13" />
@@ -156,7 +156,7 @@ function FlickCard({
           </div>
         </button>
         {myId === flick.author.id && (
-          <button onClick={() => onDelete(flick.id)} className="flex flex-col items-center gap-1.5">
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(flick.id); }} className="flex flex-col items-center gap-1.5">
             <div className="w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />

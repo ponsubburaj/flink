@@ -75,7 +75,7 @@ export default function ShareSheet({
     : recent.map((r) => ({ key: r.conversationId, user: r.user, action: () => sendToConversation(r.conversationId, r.conversationId) }));
 
   return (
-    <div className="absolute inset-0 bg-black/60 flex items-end z-50" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/60 flex items-end z-[200]" onClick={onClose}>
       <div className="bg-paper w-full max-h-[75%] rounded-t-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-mist">
           <span className="font-medium text-ink text-sm">Share</span>

@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { pusherServer } from "@/lib/pusher";
 import { sendPushToUser } from "@/lib/push";
+import { askAlphaAI } from "@/lib/groq";
+import { ALPHA_AI_USERNAME } from "@/lib/alphaAi";
 
 async function verifyParticipant(conversationId: string, userId: string) {
   const participant = await db.conversationParticipant.findUnique({
@@ -65,25 +67,55 @@ export async function POST(
     data: { conversationId: id, senderId: userId, text: text.trim() },
     include: { sender: { select: { id: true, username: true, avatarUrl: true } } },
   });
-  
+
   await pusherServer.trigger(`conversation-${id}`, "new-message", message);
 
   const otherParticipants = await db.conversationParticipant.findMany({
     where: { conversationId: id, userId: { not: userId } },
+    include: { user: { select: { id: true, username: true } } },
   });
 
+  const alphaParticipant = otherParticipants.find((p) => p.user.username === ALPHA_AI_USERNAME);
+  const humanParticipants = otherParticipants.filter((p) => p.user.username !== ALPHA_AI_USERNAME);
+
+  if (humanParticipants.length > 0) {
     await db.notification.createMany({
-    data: otherParticipants.map((p) => ({
-      recipientId: p.userId,
-      actorId: userId,
-      type: "MESSAGE" as const,
-    })),
-  });
+      data: humanParticipants.map((p) => ({
+        recipientId: p.userId,
+        actorId: userId,
+        type: "MESSAGE" as const,
+      })),
+    });
 
-  const sender = await db.user.findUnique({ where: { id: userId }, select: { username: true } });
-  otherParticipants.forEach((p) => {
-    sendPushToUser(p.userId, sender?.username || "New message", text.trim().slice(0, 80), `/messages/${id}`).catch(() => {});
-  });
+    const sender = await db.user.findUnique({ where: { id: userId }, select: { username: true } });
+    humanParticipants.forEach((p) => {
+      sendPushToUser(p.userId, sender?.username || "New message", text.trim().slice(0, 80), `/messages/${id}`).catch(() => {});
+    });
+  }
+
+  if (alphaParticipant) {
+    const recentMessages = await db.message.findMany({
+      where: { conversationId: id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+
+    const history = recentMessages
+      .reverse()
+      .map((m) => ({
+        role: m.senderId === alphaParticipant.userId ? ("assistant" as const) : ("user" as const),
+        content: m.text || "",
+      }));
+
+    const replyText = await askAlphaAI(history);
+
+    const aiMessage = await db.message.create({
+      data: { conversationId: id, senderId: alphaParticipant.userId, text: replyText },
+      include: { sender: { select: { id: true, username: true, avatarUrl: true } } },
+    });
+
+    await pusherServer.trigger(`conversation-${id}`, "new-message", aiMessage);
+  }
 
   return NextResponse.json({ message }, { status: 201 });
 }

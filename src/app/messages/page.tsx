@@ -5,6 +5,40 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+function AlphaAIRow() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function open() {
+    setLoading(true);
+    const res = await fetch("/api/alpha-ai/start", { method: "POST" });
+    const json = await res.json();
+    setLoading(false);
+    if (res.ok) router.push(`/messages/${json.conversationId}`);
+  }
+
+  return (
+    <button
+      onClick={open}
+      disabled={loading}
+      className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-mist/40 transition-colors text-left mb-2 disabled:opacity-60"
+    >
+      <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0">
+        <img src="/alpha-ai-avatar.png" alt="Alpha AI" className="w-full h-full object-cover" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="text-ink font-medium text-sm">Alpha AI</p>
+          <span className="text-[10px] font-medium bg-gradient-to-r from-flash to-signal text-white rounded-full px-1.5 py-0.5">
+            AI
+          </span>
+        </div>
+        <p className="text-ash text-xs">Ask me anything</p>
+      </div>
+    </button>
+  );
+}
+
 type ConversationItem = {
   id: string;
   otherUser: { id: string; username: string; avatarUrl: string | null };
@@ -72,12 +106,14 @@ export default function InboxPage() {
       <div className="w-full max-w-lg">
         <h1 className="font-display text-2xl font-semibold text-ink mb-4">Messages</h1>
 
-        <input
+                <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search people to message…"
           className="w-full border border-mist rounded-lg px-4 py-2.5 text-ink focus:outline-none focus:border-flash focus:ring-1 focus:ring-flash mb-4"
         />
+
+        {!query.trim() && <AlphaAIRow />}
 
         {query.trim() && (
           <div className="space-y-1 mb-6">
