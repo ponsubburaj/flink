@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import BlipsRow from "@/components/BlipsRow";
 
 type FeedPost = {
   id: string;
@@ -79,8 +80,12 @@ export default function HomePage() {
     return <div className="min-h-screen flex items-center justify-center text-ash">Loading…</div>;
   }
 
-  return (
-    <div className="min-h-screen bg-paper flex justify-center px-6 py-10">
+    return (
+    <div className="min-h-screen bg-paper">
+      <div className="max-w-md mx-auto">
+        <BlipsRow />
+      </div>
+      <div className="flex justify-center px-6 py-10">
       <div className="w-full max-w-md">
         {posts.length === 0 ? (
           <div className="text-center text-ash text-sm mt-20">
@@ -143,7 +148,8 @@ export default function HomePage() {
               </button>
             )}
           </div>
-        )}
+              )}
+      </div>
       </div>
     </div>
   );

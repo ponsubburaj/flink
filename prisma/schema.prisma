@@ -39,6 +39,9 @@ model User {
   conversations          ConversationParticipant[]
   notifications          Notification[] @relation("recipient")
   triggeredNotifications Notification[] @relation("actor")
+    blips      Blip[]
+  blipViews  BlipView[]
+  blipLikes  BlipLike[]
 }
 model PushSubscription {
   id        String   @id @default(cuid())
@@ -165,4 +168,38 @@ enum NotificationType {
   LIKE
   COMMENT
   MESSAGE
+}
+model Blip {
+  id        String   @id @default(cuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  mediaUrl  String
+  mediaType String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  views BlipView[]
+  likes BlipLike[]
+}
+
+model BlipView {
+  id        String   @id @default(cuid())
+  blipId    String
+  blip      Blip     @relation(fields: [blipId], references: [id], onDelete: Cascade)
+  viewerId  String
+  viewer    User     @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blipId, viewerId])
+}
+
+model BlipLike {
+  id        String   @id @default(cuid())
+  blipId    String
+  blip      Blip     @relation(fields: [blipId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blipId, userId])
 }
