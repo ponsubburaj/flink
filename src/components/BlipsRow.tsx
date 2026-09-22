@@ -33,14 +33,16 @@ export default function BlipsRow() {
   return (
     <>
       <div className="flex gap-4 px-4 py-3 overflow-x-auto border-b border-mist">
-        <Link href="/blips/create" className="flex flex-col items-center gap-1 flex-shrink-0">
-          <div className="w-16 h-16 rounded-full bg-mist flex items-center justify-center relative">
-            {myGroup ? (
-              <img src={myGroup.author.avatarUrl || ""} alt="" className="w-full h-full rounded-full object-cover" />
+                <Link href="/blips/create" className="flex flex-col items-center gap-1 flex-shrink-0">
+          <div className="w-16 h-16 rounded-full bg-mist flex items-center justify-center relative overflow-visible">
+            {myGroup?.author.avatarUrl ? (
+              <img src={myGroup.author.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
             ) : (
-              <span className="text-ash text-2xl">+</span>
+              <span className="text-ash text-2xl font-display">+</span>
             )}
-            <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-gradient-to-r from-flash to-signal text-white text-xs flex items-center justify-center">+</span>
+            <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-r from-flash to-signal text-white text-base font-medium flex items-center justify-center border-2 border-paper shadow-sm">
+              +
+            </span>
           </div>
           <span className="text-xs text-ash">Your Blip</span>
         </Link>

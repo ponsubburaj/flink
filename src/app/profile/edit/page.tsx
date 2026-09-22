@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import CropModal from "@/components/CropModal";
+import { prepareFileForUpload } from "@/lib/uploadFile";
 
 export default function EditProfilePage() {
   const { data: session, status, update } = useSession();
@@ -34,9 +35,10 @@ export default function EditProfilePage() {
     }
   }, [session]);
 
-    function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+      async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.files?.[0];
+    if (!raw) return;
+    const file = await prepareFileForUpload(raw);
     setCropSrc(URL.createObjectURL(file));
   }
 

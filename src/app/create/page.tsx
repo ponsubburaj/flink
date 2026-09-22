@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { prepareFileForUpload } from "@/lib/uploadFile";
 
 export default function CreatePostPage() {
   const { data: session, status } = useSession();
@@ -15,10 +16,11 @@ export default function CreatePostPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files || []).slice(0, 10);
-    setFiles(selected);
-    setPreviews(selected.map((f) => URL.createObjectURL(f)));
+    const converted = await Promise.all(selected.map(prepareFileForUpload));
+    setFiles(converted);
+    setPreviews(converted.map((f) => URL.createObjectURL(f)));
     setError("");
   }
 

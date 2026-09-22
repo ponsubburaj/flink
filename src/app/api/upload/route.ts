@@ -6,7 +6,10 @@ import { authOptions } from "@/lib/auth";
 import { r2, R2_BUCKET, R2_PUBLIC_URL } from "@/lib/r2";
 import { randomUUID } from "crypto";
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"];
+const ALLOWED_TYPES = [
+  "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
+  "video/mp4", "video/webm", "video/quicktime",
+];
 const MAX_SIZE = 100 * 1024 * 1024; // 100MB, covers photos and short videos
 
 export async function POST(req: Request) {

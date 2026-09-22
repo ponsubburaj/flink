@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { prepareFileForUpload } from "@/lib/uploadFile";
 
 export default function CreateFlickPage() {
   const { data: session, status } = useSession();

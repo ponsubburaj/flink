@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { prepareFileForUpload } from "@/lib/uploadFile";
 
 export default function CreateBlipPage() {
   const { status } = useSession();
@@ -16,9 +17,10 @@ export default function CreateBlipPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
+    async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.files?.[0];
+    if (!raw) return;
+    const f = await prepareFileForUpload(raw);
 
     const type = f.type.startsWith("video") ? "video" : "image";
     if (type === "video" && f.size > 50 * 1024 * 1024) {
